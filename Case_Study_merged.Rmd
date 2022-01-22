@@ -1,18 +1,19 @@
 ---
 title: "Data Analysis and Visualization in R (IN2339)"
-subtitle: "Case Study"
-author: "[Dejvi Zelo, Caterina Köhl, Nicolas Bodman, Angelin Panjaitan]"
+author: '[Dejvi Zelo, Caterina Köhl, Nicolas Bodman, Angelin Panjaitan]'
 date: "`r Sys.Date()`"
 output:
-  html_document: 
+  pdf_document:
     fig_caption: yes
-  pdf_document: 
+  html_document:
     fig_caption: yes
+  word_document: default
+subtitle: Case Study
 ---
 
 ```{r, setup, include=FALSE}
 # Set up root directory for all notebook chunks
-knitr::opts_knit$set(root.dir = '/Users/angiepanjaitan/Desktop/WS21:22/Data Analysis and Visualization in R/Case Study - The City of Barcelona-20211117/data')
+knitr::opts_knit$set(root.dir = '/Users/joshuapanjaitan/Desktop/dataviz-main/')
 ```
 
 
@@ -57,7 +58,7 @@ We need to make a little remark here. There is a mistake in the original rent da
 # Load datasets
 ## load population data set
 ## showing population of Barcelona's districts
-  population <- fread("population.csv", encoding="UTF-8")
+  population <- fread("data/population.csv", encoding="UTF-8")
   colnames(population) <- c("Year","District_Code","District_Name","Neighborhood_Code",
                              "Neighborhood_Name","Gender","Age","Population")
  aggregated_population <- aggregate(Population ~ Year + District_Code + District_Name + Neighborhood_Code, population, FUN = sum)
@@ -67,18 +68,16 @@ We need to make a little remark here. There is a mistake in the original rent da
  
  
 ## load average rent data set
-  average_rent_2015 <- fread("2015_lloguer_preu_trim.csv", encoding="UTF-8")
-  average_rent_2016 <- fread("2016_lloguer_preu_trim.csv", encoding="UTF-8")
-  average_rent_2017 <- fread("2017_lloguer_preu_trim.csv", encoding="UTF-8")
+  average_rent_2015 <- fread("data/2015_lloguer_preu_trim.csv", encoding="UTF-8")
+  average_rent_2016 <- fread("data/2016_lloguer_preu_trim.csv", encoding="UTF-8")
+  average_rent_2017 <- fread("data/2017_lloguer_preu_trim.csv", encoding="UTF-8")
   average_rent <- rbindlist(list(average_rent_2015, average_rent_2016, average_rent_2017))
   
   
 ## load unemployment data set
-  unemployment <- fread("unemployment.csv", encoding="UTF-8")
+  unemployment <- fread("data/unemployment.csv", encoding="UTF-8")
   unemployment[, Month := as.factor(Month)]
   colnames(unemployment) <- gsub(" ", "_", colnames(unemployment))
-
-
 replace_spacings <- function(dt){
   
   replace_spacing <- function(col){
@@ -88,11 +87,8 @@ replace_spacings <- function(dt){
   names(underlined_dt) <- sapply(names(underlined_dt), replace_spacing)
   return(underlined_dt)
 }
-
 ## Function for translation of column names of data table from catalan to english
 # here the mistake in the column name "Trimestre" will be fixed
-
-
 convert_to_quarter <- function(dt, col){
   # sum up data as we have observations for female/male registered unemployed/unemployed on demand
   summed_dt <- dt[, .(Unemployment_Number = sum(Unemployment_Number)), by=c("Year", col, "Month")]
@@ -104,10 +100,8 @@ convert_to_quarter <- function(dt, col){
   third_quarter[, Quarter := 3]
   fourth_quarter <- summed_dt[Month %in% c("October", "November", "December"), .(Unemployment_Number = mean(Unemployment_Number)), by=c(col, "Year")]
   fourth_quarter[, Quarter := 4]
-
   converted_dt <- rbindlist(list(first_quarter, second_quarter, third_quarter, fourth_quarter))
 }
-
 translate_columns <- function(dt){
   translate_column <- function(col){
     if (col == "Nom_Barri"){
@@ -151,7 +145,6 @@ translate_columns <- function(dt){
   names(translated_dt) <- sapply(names(translated_dt), translate_column)
   return(translated_dt)
 }
-
 translate_columns2 <- function(dt){
   
   translate_column <- function(col){
@@ -197,9 +190,6 @@ translate_columns2 <- function(dt){
   names(translated_dt) <- sapply(names(translated_dt), translate_column)
   return(translated_dt)
 }
-
-
-
 av_quarter <- function(dt, col){
   first_quarter <- dt[Month %in% c("January", "February", "March"), .(Number = mean(Number)), by=c(col, "Year")]
   first_quarter[, Quarter := 1]
@@ -213,29 +203,22 @@ av_quarter <- function(dt, col){
   averaged_dt <- rbindlist(list(first_quarter, second_quarter, third_quarter, fourth_quarter))
 }
 
-#chunk from Final_plot (Processing)
 
+#chunk from Final_plot (Processing)
 average_rent[, Lloguer_mitja := as.factor(Lloguer_mitja)]
 average_rent <- translate_columns(average_rent)
-
 # only consider price per m^2
 average_rent_m2 <- average_rent[Lloguer_mitja == "Lloguer mitjà per superfície (Euros/m2 mes)"]
-
 quarter_unemployment_distr <- av_quarter(unemployment, "District_Code")
 slim_average_rent_distr <- average_rent_m2[, c("District_Code", "Price", "Year", "Quarter")]
-
-
 # we only have rent data for 2015, 2016, 2017
 rent_unemployment_distr <- merge(quarter_unemployment_distr[Year > 2014], slim_average_rent_distr, by=c("District_Code", "Year", "Quarter"))
 rent_unemployment_distr[, District_Code := as.factor(District_Code)]
 rent_unemployment_distr[, Year := as.factor(Year)]
 rent_unemployment_distr <- na.omit(rent_unemployment_distr)
-
 ggplot(rent_unemployment_distr, aes(Number, Price, color=Year)) + geom_jitter()
-
 ggplot(rent_unemployment_distr, aes(sample=Number)) + geom_qq() + geom_qq_line()
 `D`
-
 aggregated_population <- aggregate(Population ~ Year + District_Code + District_Name + Neighborhood_Code, population, FUN = sum)
 aggregated_population <- as.data.table(aggregated_population)
 aggregated_population <- aggregated_population[Year != 2013 & Year != 2014]
@@ -251,31 +234,23 @@ total_population_district$District_Name <- factor(total_population_district$Dist
 average_rent_original <- rbindlist(list(average_rent_2015, average_rent_2016, average_rent_2017))
 average_rents <- na.omit(average_rent_original)
 average_rent_m2_unp <- average_rents[Lloguer_mitja == "Lloguer mitjà per superfície (Euros/m2 mes)"]
-
 average_rent_m2_unp <- translate_columns2(average_rent_m2_unp)
 unemployment_15_16_17 <- replace_spacings(unemployment[Year > 2014])
-
 # add a new column for cleaner naming
 unemployment_15_16_17[, Unemployment_Number := Number] %>% .[Demand_occupation == "Unemployment demand"]
-
 # we will just consider columns, which are interesting for us
 slim_average_rent_nbhd <- average_rent_m2_unp[, c("Neighborhood_Name", "Rent_Price", "Year", "Quarter", "District_Name")]
 slim_unemployment <- unemployment_15_16_17[, c("Neighborhood_Name", "Unemployment_Number", "Year", "Month", "District_Name")]
-
 ## Analysis number of unemployment vs rent prices per m^2
-
 # as the rent dataset is split into quarter, we will average the unemployment dataset to get the data per quarter of the year.
 quarter_unemployment_nbhd <- convert_to_quarter(slim_unemployment, "Neighborhood_Name")
-
 # merge unemployment and rent prices datasets
 rent_unemployment_nbhd <- merge(quarter_unemployment_nbhd, slim_average_rent_nbhd, by=c("Neighborhood_Name", "Year", "Quarter"))
-
 # factorize appropriate columns and omit rows with missing unemployment numbers or rent prices
 rent_unemployment_nbhd[, District_Name := as.factor(District_Name)]
 rent_unemployment_nbhd[, Neighborhood_Name := as.factor(Neighborhood_Name)]
 rent_unemployment_nbhd[, Year := as.factor(Year)]
 rent_unemployment_nbhd[, Quarter := as.factor(Quarter)]
-
 ```
 
 
@@ -297,6 +272,12 @@ ggplot(total_population_district, aes(District_Name,Total_Population)) +
 
 
 ```{r echo=FALSE, warning=FALSE}
+district_name_dt <- unemployment[District_Code !=99, unique(District_Name), by = "District_Code"]
+colnames(district_name_dt) <- c("District_Code","District_Name")
+district_name_dt$District_Code <- as.factor(district_name_dt$District_Code)
+merged_rent_unemployment <- merge(district_name_dt,rent_unemployment_distr, by = "District_Code")
+
+
 # Boxplots
 ggplot(merged_rent_unemployment,aes(District_Name, Price))+geom_boxplot() + 
   scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) + 
